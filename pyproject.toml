@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "appa-backend"
+version = "0.1.0"
+description = "Backend team repository of Acarreos Appa: an application for carriages and packages delivery service"
+authors = ["Sergio A. Bermúdez Gómez <sebermudezg@unal.edu.co>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^4.2.6"
+psycopg2-binary = "^2.9.9"
+dj-database-url = "^2.1.0"
+python-dotenv = "^1.0.0"
+djangorestframework = "^3.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
