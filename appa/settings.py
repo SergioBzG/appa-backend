@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 from dotenv import load_dotenv
 from pathlib import Path
+import os
+import dj_database_url
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,7 +44,9 @@ DJANGO_APPS = [
 ]
 
 APPA_APPS = [
-
+    'authentication',
+    'services',
+    'appa_admin',
 ]
 
 DEPENDENCIES_APPS = [
@@ -86,12 +90,13 @@ WSGI_APPLICATION = 'appa.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        # Feel free to alter this value to suit your needs.
+        default=os.environ.get('DATABASE_URL', default=os.environ.get('STR_CONNECTION'))
+    )
 }
 
+AUTH_USER_MODEL = "appa_admin.User"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
