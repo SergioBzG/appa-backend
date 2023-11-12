@@ -9,7 +9,7 @@ class Role(models.Model):
         verbose_name="ID",
         editable=False,
     )
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
     description = models.CharField(max_length=80)
 
     def __str__(self):

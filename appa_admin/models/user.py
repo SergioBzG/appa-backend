@@ -18,12 +18,19 @@ class User(AbstractUser):
         on_delete=models.SET_NULL,
         null=True, related_name="users"
     )
-    document = models.CharField(max_length=50, unique=True)
+    document = models.CharField(max_length=50, unique=True, null=True)
     name = models.CharField(max_length=50)
-    email = models.EmailField(max_length=50)
-    phone = models.CharField(max_length=25, unique=True)
-    vehicle = models.CharField(max_length=10, unique=True)
+    email = models.EmailField(max_length=50, unique=True)
+    phone = models.CharField(max_length=25, unique=True, null=True)
+    vehicle = models.CharField(max_length=10, unique=True, null=True)
     available = models.BooleanField(default=True)
+
+    # Remove username field and use email as unique identifier
+    username = None
+    first_name = None
+    last_name = None
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["role", "name"]
 
     # Use custom user manager
     objects = UserManager()
