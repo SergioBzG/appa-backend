@@ -4,8 +4,12 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+from ..permissions.is_token_valid import IsTokenValid
+
+from ..models import BlackListedToken
 from appa_admin.models import User
 from authentication.models.role import Role
+
 from appa_admin.serializers.user_serializer import UserSerializer
 from authentication.serializers.user_login_serializer import UserLoginSerializer
 
@@ -13,7 +17,7 @@ from ..helpers.create_token import get_tokens_for_user
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsTokenValid])
 def register_user(request) -> JsonResponse:
     """_summary_
 
@@ -81,7 +85,7 @@ def user_logout(request) -> JsonResponse:
     Returns:
         JsonResponse: _description_
     """
-    logout(request)
+    BlackListedToken.objects.create(user=request.user, token=request.auth)
     return JsonResponse(
         data={"message": "User logged out successfully"},
         status=status.HTTP_200_OK
