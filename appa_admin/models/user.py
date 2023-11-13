@@ -30,7 +30,7 @@ class User(AbstractUser):
     first_name = None
     last_name = None
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["role", "name"]
+    REQUIRED_FIELDS = ["name"]
 
     # Use custom user manager
     objects = UserManager()
