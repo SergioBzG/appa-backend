@@ -13,7 +13,7 @@ from services.serializers.service_serializer import ServiceSerializer
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsTokenValid])
-def create_service(request) -> JsonResponse:
+def create_carriage(request) -> JsonResponse:
     """_summary_
 
     Args:
@@ -34,52 +34,90 @@ def create_service(request) -> JsonResponse:
                 current_nation=service.origin_nation,
                 current_checkpoint=service.origin_checkpoint
             )
+            request.data["carriage"]["service"] = service.id
+            carriage_serializer = CarriageSerializer(data=request.data["carriage"])
 
-            if service.type == "CARRIAGE":
-                request.data["carriage"]["service"] = service.id
-                carriage_serializer = CarriageSerializer(data=request.data["carriage"])
-
-                if carriage_serializer.is_valid():
-                    carriage_serializer.save()
-                    return JsonResponse(
-                        data=service_serializer.data,
-                        status=status.HTTP_201_CREATED
-                    )
-
-                service.delete()
+            if carriage_serializer.is_valid():
+                carriage_serializer.save()
                 return JsonResponse(
-                    data=carriage_serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
+                    data=service_serializer.data,
+                    status=status.HTTP_201_CREATED
                 )
 
-            elif service.type == "PACKAGE":
-                request.data["package"]["service"] = service.id
-                package_serializer = PackageSerializer(data=request.data["package"])
-                if package_serializer.is_valid():
-                    package_serializer.save()
-                    return JsonResponse(
-                        data=service_serializer.data,
-                        status=status.HTTP_201_CREATED
-                    )
-
-                service.delete()
-                return JsonResponse(
-                    data=package_serializer.errors,
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            else:
-                service.delete()
-                return JsonResponse(
-                    data={"message": "Invalid service type"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            service.delete()
+            return JsonResponse(
+                data=carriage_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         return JsonResponse(
             data=service_serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    except KeyError:
+        return JsonResponse(
+            data={"message": f"Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        if service:
+            service.delete()
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsTokenValid])
+def create_package(request) -> JsonResponse:
+    """_summary_
+
+    Args:
+        request (_type_): _description_
+
+    Returns:
+        JsonResponse: _description_
+    """
+    try:
+        service: Service = None
+        request.data["price"] = 0
+        service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
+
+        if service_serializer.is_valid():
+            service = service_serializer.save()
+            Guide.objects.create(
+                service=service,
+                current_nation=service.origin_nation,
+                current_checkpoint=service.origin_checkpoint
+            )
+            request.data["package"]["service"] = service.id
+            package_serializer = PackageSerializer(data=request.data["package"])
+
+            if package_serializer.is_valid():
+                package_serializer.save()
+                return JsonResponse(
+                    data=service_serializer.data,
+                    status=status.HTTP_201_CREATED
+                )
+
+            service.delete()
+            return JsonResponse(
+                data=package_serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return JsonResponse(
+            data=service_serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": f"Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         if service:
             service.delete()
@@ -125,6 +163,7 @@ def update_get_service(request, service_id: int) -> JsonResponse:
                 data=serializer.data,
                 status=status.HTTP_200_OK
             )
+
     except Service.DoesNotExist:
         return JsonResponse(
             data={"message": "Service does not exist"},

@@ -24,7 +24,7 @@ def get_user_services(request, user_id: int) -> JsonResponse:
     try:
         user: User = User.objects.get(pk=user_id)
         if user.role.name == "CITIZEN":
-            user_services: list[Service] = user.citizen_orders.all().order_by("-created")
+            user_services: list[Service] = user.citizen_orders.all().order_by("created")
             services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
             return JsonResponse(
                 data=services_serializer.data,
@@ -32,7 +32,7 @@ def get_user_services(request, user_id: int) -> JsonResponse:
                 status=status.HTTP_200_OK
             )
         elif user.role.name == "BISON":
-            user_services: list[Service] = user.bison_orders.all().order_by("-created")
+            user_services: list[Service] = user.bison_orders.all().order_by("created")
             services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
             return JsonResponse(
                 data=services_serializer.data,

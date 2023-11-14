@@ -22,7 +22,7 @@ class Service(models.Model):
         related_name="bison_orders",
         null=True,
     )
-    type = models.CharField(max_length=50)
+    type = models.CharField(max_length=10)
     created = models.DateTimeField(auto_now_add=True)
     arrived = models.DateTimeField(null=True, blank=True)
     price = models.IntegerField()
@@ -79,6 +79,10 @@ class Service(models.Model):
                 ]),
                 name="valid_destiny_checkpoint",
             ),
+            models.CheckConstraint(
+                check=models.Q(type__in=["CARRIAGE", "PACKAGE"]),
+                name="valid_type",
+            )
         ]
 
     def __str__(self):
