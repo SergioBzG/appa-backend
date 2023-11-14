@@ -75,7 +75,7 @@ def login(request) -> JsonResponse:
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsTokenValid])
 def user_logout(request) -> JsonResponse:
     """_summary_
 

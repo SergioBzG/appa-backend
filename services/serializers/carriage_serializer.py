@@ -4,7 +4,6 @@ from ..models.carriage import Carriage
 
 
 class CarriageSerializer(ModelSerializer):
-
     class Meta:
         model = Carriage
         fields = "__all__"

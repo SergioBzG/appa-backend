@@ -4,7 +4,6 @@ from appa_admin.models.user import User
 
 
 class Service(models.Model):
-
     id = models.AutoField(
         auto_created=True,
         primary_key=True,
@@ -25,7 +24,7 @@ class Service(models.Model):
     )
     type = models.CharField(max_length=50)
     created = models.DateTimeField(auto_now_add=True)
-    arrived = models.DateTimeField(null=True)
+    arrived = models.DateTimeField(null=True, blank=True)
     price = models.IntegerField()
     destiny_nation = models.CharField(max_length=50)
     origin_nation = models.CharField(max_length=50)
@@ -82,4 +81,5 @@ class Service(models.Model):
             ),
         ]
 
-
+    def __str__(self):
+        return f"{self.id} - {self.type}"

@@ -44,3 +44,6 @@ class Guide(models.Model):
                 name="valid_current_checkpoint",
             )
         ]
+
+    def __str__(self):
+        return f"Guide number: {self.guide_number}"
