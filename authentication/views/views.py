@@ -28,7 +28,7 @@ def register_user(request) -> JsonResponse:
         JsonResponse: _description_
     """
     try:
-        role: Role = Role.objects.get(name=request.data["role"])
+        role: Role = Role.objects.get(name="CITIZEN")
         request.data["role"]: int = role.id
         serializer: UserSerializer = UserSerializer(data=request.data)
 
