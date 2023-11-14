@@ -10,4 +10,5 @@ class RoleAdmin(admin.ModelAdmin):
         "description",
     )
 
+
 admin.site.register(Role, RoleAdmin)
