@@ -1,5 +1,4 @@
 from django.http import JsonResponse
-from django.contrib.auth import logout
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -17,7 +16,6 @@ from ..helpers.create_token import get_tokens_for_user
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsTokenValid])
 def register_user(request) -> JsonResponse:
     """_summary_
 
