@@ -3,8 +3,9 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-
 from authentication.permissions.is_token_valid import IsTokenValid
+from authentication.permissions.role_permissions import IsCitizen, IsBison
+
 from ..helpers.get_service_price_and_route import get_service_price_and_route
 from ..models import Service, Guide
 from ..serializers.carriage_serializer import CarriageSerializer
@@ -13,7 +14,7 @@ from ..serializers.service_serializer import ServiceSerializer
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsTokenValid])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
 def create_carriage(request) -> JsonResponse:
     """_summary_
 
@@ -24,13 +25,17 @@ def create_carriage(request) -> JsonResponse:
         JsonResponse: _description_
     """
     try:
+        if request.data["user_citizen"] != request.user.id:
+            return JsonResponse(
+                data={"message": "Incorrect user id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         service: Service = None
         # set price and route to 0 and empty string
         request.data["price"] = 0
         request.data["route"] = ""
         service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
         if service_serializer.is_valid():
-
             service = service_serializer.save()
             # get price and route
             price, route = get_service_price_and_route(service=service)
@@ -79,7 +84,7 @@ def create_carriage(request) -> JsonResponse:
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsTokenValid])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
 def create_package(request) -> JsonResponse:
     """_summary_
 
@@ -90,6 +95,11 @@ def create_package(request) -> JsonResponse:
         JsonResponse: _description_
     """
     try:
+        if request.data["user_citizen"] != request.user.id:
+            return JsonResponse(
+                data={"message": "Incorrect user id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         service: Service = None
         request.data["price"] = 0
         service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
@@ -137,7 +147,7 @@ def create_package(request) -> JsonResponse:
 
 
 @api_view(["PATCH", "GET"])
-@permission_classes([IsAuthenticated, IsTokenValid])
+@permission_classes([IsAuthenticated, IsTokenValid, IsBison])
 def update_get_service(request, service_id: int) -> JsonResponse:
     """_summary_
 
@@ -149,6 +159,12 @@ def update_get_service(request, service_id: int) -> JsonResponse:
     """
     try:
         service: Service = Service.objects.get(id=service_id)
+        if service.user_bison.id != request.user.id:
+            return JsonResponse(
+                data={"message": "You do not have a service assigned with this id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         if request.method == "PATCH":
             guide: Guide = service.guide
             guide.current_nation = request.data["current_nation"]
@@ -182,4 +198,9 @@ def update_get_service(request, service_id: int) -> JsonResponse:
         return JsonResponse(
             data={"message": f"Missing required fields"},
             status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

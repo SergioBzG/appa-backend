@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import (
-    carriage_view,
     service_views,
 )
 

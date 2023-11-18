@@ -1,8 +1,7 @@
 from django.http import JsonResponse
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from authentication.permissions.is_token_valid import IsTokenValid
 from services.models import Service
@@ -11,7 +10,7 @@ from ..models.user import User
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsTokenValid])
+@permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
 def get_user_services(request, user_id: int) -> JsonResponse:
     """_summary_
 
@@ -23,6 +22,12 @@ def get_user_services(request, user_id: int) -> JsonResponse:
     """
     try:
         user: User = User.objects.get(pk=user_id)
+        if user != request.user:
+            return JsonResponse(
+                data={"message": "Incorrect user id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         if user.role.name == "CITIZEN":
             user_services: list[Service] = user.citizen_orders.all().order_by("created")
             services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
