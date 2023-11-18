@@ -26,7 +26,6 @@ class ServiceSerializer(serializers.ModelSerializer):
             "origin_checkpoint",
             "destiny_nation",
             "destiny_checkpoint",
-            "route",
             "carriage",
             "package",
             "guide"

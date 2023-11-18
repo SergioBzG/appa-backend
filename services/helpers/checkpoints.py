@@ -2,18 +2,19 @@ from enum import Enum
 
 
 class Checkpoint(Enum):
-    NORTHERN_WATER = "TRIBU AGUA DEL NORTE"
-    SOUTHERN_WATER = "TRIBU AGUA DEL SUR"
-    NORTHERN_AIR = "TRIBU AIRE DEL NORTE"
-    EASTERN_AIR = "TRIBU AIRE DEL ESTE"
-    WESTERN_AIR = "TRIBU AIRE DEL OESTE"
-    SOUTHERN_AIR = "TRIBU AIRE DEL SUR"
-    BA_SING_SE = "BA SING SE"
-    ABBEY = "ABADIA"
-    GAIPAN_VILLAGE = "GAIPAN"
-    SI_WONG = "SI WONG"
-    FIRE_CAPITAL = "CAPITAL NACION DEL FUEGO"
-    SHU_JING = "SHU JING"
+    NORTHERN_WATER = "Tribu agua del norte"
+    SOUTHERN_WATER = "Tribu agua del sur"
+    NORTHERN_AIR = "Tribu aire del norte"
+    EASTERN_AIR = "Tribu aire del este"
+    WESTERN_AIR = "Tribu aire del oeste"
+    SOUTHERN_AIR = "Tribu aire del sur"
+    BA_SING_SE = "Ba Sing Se"
+    ABBEY = "Abadía"
+    GAIPAN_VILLAGE = "Gaipan"
+    SI_WONG = "Si Wong"
+    FIRE_CAPITAL = "Capital nación del fuego"
+    SHU_JING = "Shu Jing"
+
 
 # Coordinates of each checkpoint
 coordinates: dict[Checkpoint, tuple] = {

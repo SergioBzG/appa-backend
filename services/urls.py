@@ -20,6 +20,11 @@ services_urls = [
         service_views.update_get_service,
         name="create_get_service"
         ),
+    path(
+        "services/price/",
+        service_views.get_service_price,
+        name="get_service_price"
+        ),
 ]
 
 carriage_urls = [
