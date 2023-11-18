@@ -30,6 +30,7 @@ class Service(models.Model):
     origin_nation = models.CharField(max_length=50)
     origin_checkpoint = models.CharField(max_length=50)
     destiny_checkpoint = models.CharField(max_length=50)
+    route = models.CharField(blank=True)
 
     class Meta:
         constraints = [

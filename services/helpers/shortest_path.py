@@ -1,36 +1,48 @@
-# import heapq
-# from math import inf
-# from Graph import Graph
-# from Node import Node
-# from collections import deque
-#
-#
-# def find_path_flight(node_origin: int, node_destination: int):
-#     path_flight = deque([])
-#     NO_PARENT = -1
-#
-#     graphSPD: dict = dict([(i, inf) for i in range(Node.nodes_quantity)])
-#     graphSPD[node_origin] = 0
-#     parents = [-1] * Node.nodes_quantity
-#
-#     # Start Dijkstra
-#     queue: list = []
-#     heapq.heappush(queue, (0, node_origin))  # (SPD, node)
-#     while len(queue) > 0:
-#         spdU, u = heapq.heappop(queue)
-#         for v, d in Graph.graph[u].items():
-#             if spdU + d < graphSPD[v]:
-#                 graphSPD[v] = spdU + d
-#                 heapq.heappush(queue, (graphSPD[v], v))
-#                 parents[v] = u
-#
-#     def print_path(current_vertex, parents_data):
-#         # Base case : Source node has
-#         # been processed
-#         if current_vertex == NO_PARENT:
-#             return
-#         print_path(parents_data[current_vertex], parents_data)
-#         path_flight.append(current_vertex)
-#
-#     print_path(node_destination, parents)
-#     return path_flight, graphSPD[node_destination]
+from ..helpers.checkpoints import Checkpoint
+from ..helpers.graph import graph
+
+
+def find_shortest_path(graph: dict[Checkpoint, dict[Checkpoint, float]], start: Checkpoint, end: Checkpoint) -> tuple[list[Checkpoint], float] | None:
+    """
+    Find the shortest path between two checkpoints and the total distance
+
+    :param graph: graph with checkpoints as nodes and distances as edges
+    :param start: start checkpoint of the path
+    :param end: end checkpoint of the path
+    :return: tuple with the shortest path and the total distance
+    """
+
+    distances: dict = {node: 0 if node == start else float('inf') for node in graph}
+    previous_nodes: dict = {node: None for node in graph}
+    nodes: list[Checkpoint] = list(graph.keys())
+
+    while nodes:
+        closest_node = min(nodes, key=lambda node: distances[node])
+        if closest_node == end:
+            path = []
+            current_node = end
+            total_distance = 0
+            while current_node != start:
+                path.insert(0, current_node)
+                total_distance += graph[current_node][previous_nodes[current_node]]
+                current_node = previous_nodes[current_node]
+            path.insert(0, start)
+            return path, total_distance
+
+        nodes.remove(closest_node)
+
+        for neighbor, distance in graph[closest_node].items():
+            total_distance = distances[closest_node] + distance
+            if total_distance < distances[neighbor]:
+                distances[neighbor] = total_distance
+                previous_nodes[neighbor] = closest_node
+
+    return None
+
+
+start_checkpoint = Checkpoint.NORTHERN_WATER
+end_checkpoint = Checkpoint.SHU_JING
+shortest_path, total_distance = find_shortest_path(graph, start_checkpoint, end_checkpoint)
+
+route: str = ", ".join(map(lambda checkpoint: checkpoint.value, shortest_path))
+print(f"Route: {route}")

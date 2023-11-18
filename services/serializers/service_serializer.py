@@ -10,10 +10,6 @@ from ..models.service import Service
 class ServiceSerializer(serializers.ModelSerializer):
     carriage = serializers.SerializerMethodField()
     package = serializers.SerializerMethodField()
-    # guide = serializers.SlugRelatedField(
-    #     read_only=True,
-    #     slug_field="guide_number"
-    # )
     guide = serializers.SerializerMethodField()
 
     class Meta:
@@ -30,6 +26,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "origin_checkpoint",
             "destiny_nation",
             "destiny_checkpoint",
+            "route",
             "carriage",
             "package",
             "guide"
@@ -55,14 +52,12 @@ class ServiceSerializer(serializers.ModelSerializer):
         except Package.DoesNotExist:
             return None
 
-
     def get_guide(self, service: Service):
         guide: Package = service.guide
         if guide:
             guide_data = GuideSerializer(guide).data
             guide_data.pop("service")
             return guide_data
-
 
     def create(self, validated_data):
         service: Service = Service.objects.create(**validated_data)

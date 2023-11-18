@@ -5,10 +5,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from authentication.permissions.is_token_valid import IsTokenValid
-from services.models import Service, Guide
-from services.serializers.carriage_serializer import CarriageSerializer
-from services.serializers.package_serializer import PackageSerializer
-from services.serializers.service_serializer import ServiceSerializer
+from ..helpers.get_service_price_and_route import get_service_price_and_route
+from ..models import Service, Guide
+from ..serializers.carriage_serializer import CarriageSerializer
+from ..serializers.package_serializer import PackageSerializer
+from ..serializers.service_serializer import ServiceSerializer
 
 
 @api_view(["POST"])
@@ -24,11 +25,19 @@ def create_carriage(request) -> JsonResponse:
     """
     try:
         service: Service = None
+        # set price and route to 0 and empty string
         request.data["price"] = 0
+        request.data["route"] = ""
         service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
-
         if service_serializer.is_valid():
+
             service = service_serializer.save()
+            # get price and route
+            price, route = get_service_price_and_route(service=service)
+            service.price = price
+            service.route = route
+            service.save(update_fields=["price", "route"])
+
             Guide.objects.create(
                 service=service,
                 current_nation=service.origin_nation,
