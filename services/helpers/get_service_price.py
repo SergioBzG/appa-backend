@@ -24,8 +24,8 @@ def get_package_price(origin_checkpoint: Checkpoint, destiny_checkpoint: Checkpo
     """
     Calculate the price of a package
 
-    :param origin_checkpoint: point where carriage route starts
-    :param destiny_checkpoint: point where carriage route ends
+    :param origin_checkpoint: point where package route starts
+    :param destiny_checkpoint: point where package route ends
     :param package: package dimensions and weight
     :return: price of package
     """

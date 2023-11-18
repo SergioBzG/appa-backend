@@ -25,6 +25,11 @@ services_urls = [
         service_views.get_service_price,
         name="get_service_price"
         ),
+    path(
+        "services/route/",
+        service_views.get_route,
+        name="get_route"
+        ),
 ]
 
 carriage_urls = [
