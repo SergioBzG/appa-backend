@@ -35,47 +35,47 @@ class Service(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=models.Q(destiny_nation__in=[
-                    "NACION DEL AIRE", "NACION DEL FUEGO", "NACION DE LA TIERRA", "NACION DEL AGUA"
+                    "Nación del Aire", "Nación del Fuego", "Nación de la Tierra", "Nación del Agua"
                 ]),
                 name="valid_destiny_nation",
             ),
             models.CheckConstraint(
                 check=models.Q(origin_nation__in=[
-                    "NACION DEL AIRE", "NACION DEL FUEGO", "NACION DE LA TIERRA", "NACION DEL AGUA"
+                    "Nación del Aire", "Nación del Fuego", "Nación de la Tierra", "Nación del Agua"
                 ]),
                 name="valid_origin_nation",
             ),
             models.CheckConstraint(
                 check=models.Q(origin_checkpoint__in=[
-                    "TRIBU AGUA DEL NORTE",
-                    "TRIBU AGUA DEL SUR",
-                    "TRIBU AIRE DEL NORTE",
-                    "TRIBU AIRE DEL ESTE",
-                    "TRIBU AIRE DEL OESTE",
-                    "TRIBU AIRE DEL SUR",
-                    "BA SING SE",
-                    "ABADIA",
-                    "GAIPAN",
-                    "SI WONG",
-                    "CAPITAL NACION DEL FUEGO",
-                    "SHU JING"
+                    "Tribu agua del norte",
+                    "Tribu agua del sur",
+                    "Tribu aire del norte",
+                    "Tribu aire del este",
+                    "Tribu aire del oeste",
+                    "Tribu aire del sur",
+                    "Ba Sing Se",
+                    "Abadía",
+                    "Gaipan",
+                    "Si Wong",
+                    "Capital nación del fuego",
+                    "Shu Jing"
                 ]),
                 name="valid_origin_checkpoint",
             ),
             models.CheckConstraint(
                 check=models.Q(destiny_checkpoint__in=[
-                    "TRIBU AGUA DEL NORTE",
-                    "TRIBU AGUA DEL SUR",
-                    "TRIBU AIRE DEL NORTE",
-                    "TRIBU AIRE DEL ESTE",
-                    "TRIBU AIRE DEL OESTE",
-                    "TRIBU AIRE DEL SUR",
-                    "BA SING SE",
-                    "ABADIA",
-                    "GAIPAN",
-                    "SI WONG",
-                    "CAPITAL NACION DEL FUEGO",
-                    "SHU JING"
+                    "Tribu agua del norte",
+                    "Tribu agua del sur",
+                    "Tribu aire del norte",
+                    "Tribu aire del este",
+                    "Tribu aire del oeste",
+                    "Tribu aire del sur",
+                    "Ba Sing Se",
+                    "Abadía",
+                    "Gaipan",
+                    "Si Wong",
+                    "Capital nación del fuego",
+                    "Shu Jing"
                 ]),
                 name="valid_destiny_checkpoint",
             ),

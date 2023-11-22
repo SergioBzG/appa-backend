@@ -12,6 +12,6 @@ class UserLoginSerializer(Serializer):
         user: User = authenticate(**data)
 
         if not user:
-            raise serializers.ValidationError("Incorrect Credentials")
+            raise serializers.ValidationError("Incorrect credentials")
 
         return user
