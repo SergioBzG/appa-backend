@@ -23,12 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        print("validate")
         role = Role.objects.get(pk=self.initial_data["role"])
         document = attrs.get("document")
         vehicle = attrs.get("vehicle")
 
-        if role is not None and role.name == 'BISON' and (document is None or vehicle is None):
+        if role.name == 'BISON' and (document is None or vehicle is None):
             raise serializers.ValidationError("Document and Vehicle must not be null for BISON role.")
 
         return attrs
