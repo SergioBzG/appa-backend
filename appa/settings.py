@@ -164,6 +164,10 @@ REST_FRAMEWORK = {
     )
 }
 
+SIMPLE_JWT = {
+  # It will work instead of the default serializer(TokenObtainPairSerializer).
+  "TOKEN_OBTAIN_SERIALIZER": "authentication.serializers.token_serializer.CustomTokenObtainPairSerializer",
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
