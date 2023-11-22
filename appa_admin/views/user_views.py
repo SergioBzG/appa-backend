@@ -57,32 +57,32 @@ def get_user_services(request, user_id: int) -> JsonResponse:
             data={"message": "User does not exist"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
+
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
 def update_user_profile(request, user_id: int) -> JsonResponse:
     try:
         user: User = User.objects.get(pk=user_id)
+        request.data["role"]: int = user.role.id
         if user != request.user:
             return JsonResponse(
                 data={"message": "Incorrect user id"},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        if request.data["name"]:
-            user.name = request.data["name"]
-        if request.data["email"]:
-            user.email = request.data["email"]
-        if request.data["phone"]:
-            user.phone = request.data["phone"]
-        if request.data["password"]:
-            user.password = request.data["password"]
 
-        user.save(update_fields=["name", "email", "phone", "password"])
-        user_serializer : UserSerializer = UserSerializer(user).data
-        data: dict = {"message": "User updated successfully", "user": user_serializer.data}
-        return JsonResponse(data=data, status=status.HTTP_200_OK)
-        
+        user_serializer: UserSerializer = UserSerializer(user, data=request.data, partial=True)
+
+        if user_serializer.is_valid():
+            user_serializer.save()
+            data: dict = {"message": "User updated successfully", "user": user_serializer.data}
+            return JsonResponse(data=data, status=status.HTTP_200_OK)
+
+        return JsonResponse(
+            data=user_serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     except User.DoesNotExist:
         return JsonResponse(
             data={"message": "User does not exist"},
@@ -93,7 +93,7 @@ def update_user_profile(request, user_id: int) -> JsonResponse:
             data={"error message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    
+
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsTokenValid, IsCitizen | IsAdminUser])
@@ -108,13 +108,13 @@ def delete_user_profile(request, user_id: int) -> JsonResponse:
                     data={"message": "Incorrect user id"},
                     status=status.HTTP_403_FORBIDDEN
                 )
-            
+
         user.delete()
         return JsonResponse(
             data={"message": "User deleted"},
             status=status.HTTP_204_NO_CONTENT
         )
-    
+
     except User.DoesNotExist:
         return JsonResponse(
             data={"message": "User does not exist"},
