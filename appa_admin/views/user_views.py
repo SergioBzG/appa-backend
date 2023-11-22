@@ -11,14 +11,13 @@ from ..models.user import User
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
-def get_user_services(request, user_id: int) -> JsonResponse:
-    """_summary_
+def get_user_services(request, user_id: int, type: str = "") -> JsonResponse:
+    """
 
-        Args:
-            request (_type_): _description_
-            user_id (_int_): _description_
-        Returns:
-            JsonResponse: _description_
+    :param request:
+    :param user_id:
+    :param type:
+    :return:
     """
     try:
         user: User = User.objects.get(pk=user_id)
@@ -30,24 +29,18 @@ def get_user_services(request, user_id: int) -> JsonResponse:
 
         if user.role.name == "CITIZEN":
             user_services: list[Service] = user.citizen_orders.all().order_by("created")
-            services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
-            return JsonResponse(
-                data=services_serializer.data,
-                safe=False,
-                status=status.HTTP_200_OK
-            )
         elif user.role.name == "BISON":
             user_services: list[Service] = user.bison_orders.all().order_by("created")
-            services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
-            return JsonResponse(
-                data=services_serializer.data,
-                safe=False,
-                status=status.HTTP_200_OK
-            )
+
+        if type:
+            user_services = user_services.filter(type=type.upper())
+
+        serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
 
         return JsonResponse(
-            data={"message": "This user can not have services"},
-            status=status.HTTP_400_BAD_REQUEST
+            data=serializer.data,
+            safe=False,
+            status=status.HTTP_200_OK
         )
 
     except User.DoesNotExist:
