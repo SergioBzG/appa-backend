@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from ..permissions.is_token_valid import IsTokenValid
 
@@ -54,3 +54,23 @@ def user_logout(request) -> JsonResponse:
         status=status.HTTP_200_OK
     )
 
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsAdminUser])
+def register_bison(request) -> JsonResponse:
+    try:
+        role: Role = Role.objects.get(name="BISON")
+        request.data["role"]: int = role.id
+        serializer: UserSerializer = UserSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(data=serializer.data, status=status.HTTP_201_CREATED)
+
+        return JsonResponse(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except Role.DoesNotExist:
+        return JsonResponse(
+            data={"message": f"{request.data['role']} role does not exist."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
