@@ -49,7 +49,8 @@ def get_user_services(request, user_id: int, type: str = "") -> JsonResponse:
             data={"message": "User does not exist"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
 def get_user_last_service(request, user_id: int) -> JsonResponse:
@@ -66,18 +67,16 @@ def get_user_last_service(request, user_id: int) -> JsonResponse:
                 data={"message": "Incorrect user id"},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        user_services: list[Service] = user.citizen_orders.all().order_by("created")
-        user_last_service = user_services[-1]
 
-        serializer: ServiceSerializer = ServiceSerializer(user_last_service, many=True)
+        user_last_service: Service = user.citizen_orders.all().order_by("-created").first()
+
+        serializer: ServiceSerializer = ServiceSerializer(user_last_service)
 
         return JsonResponse(
             data=serializer.data,
-            safe=False,
             status=status.HTTP_200_OK
         )
-        
+
     except User.DoesNotExist:
         return JsonResponse(
             data={"message": "User does not exist"},
