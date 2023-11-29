@@ -33,7 +33,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+CORS_ALLOW_ALL_ORIGINS = False
 
 # Application definition
 DJANGO_APPS = [
@@ -53,12 +54,14 @@ APPA_APPS = [
 
 DEPENDENCIES_APPS = [
     'rest_framework',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    'corsheaders',
 ]
 
 INSTALLED_APPS = DEPENDENCIES_APPS + DJANGO_APPS + APPA_APPS
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

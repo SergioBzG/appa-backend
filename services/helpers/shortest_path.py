@@ -38,11 +38,3 @@ def find_shortest_path(graph: dict[Checkpoint, dict[Checkpoint, float]], start: 
                 previous_nodes[neighbor] = closest_node
 
     return None
-
-
-start_checkpoint = Checkpoint.NORTHERN_WATER
-end_checkpoint = Checkpoint.SHU_JING
-shortest_path, total_distance = find_shortest_path(graph, start_checkpoint, end_checkpoint)
-
-route: str = ", ".join(map(lambda checkpoint: checkpoint.value, shortest_path))
-print(f"Route: {route}")

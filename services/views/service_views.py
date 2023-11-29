@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -16,6 +16,7 @@ from appa_admin.models import User
 from ..models import Service, Guide
 
 from ..serializers.carriage_serializer import CarriageSerializer
+from ..serializers.guide_serializer import GuideSerializer
 from ..serializers.package_serializer import PackageSerializer
 from ..serializers.service_serializer import ServiceSerializer
 
@@ -229,7 +230,7 @@ def update_get_service(request, service_id: int) -> JsonResponse:
         )
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
 def get_service_price(request) -> JsonResponse:
     """
@@ -240,7 +241,6 @@ def get_service_price(request) -> JsonResponse:
     try:
         start_checkpoint: Checkpoint = Checkpoint(request.data["origin_checkpoint"])
         end_checkpoint: Checkpoint = Checkpoint(request.data["destiny_checkpoint"])
-
         if request.data["type"] == "CARRIAGE":
             price: int = get_carriage_price(start_checkpoint, end_checkpoint)
         elif request.data["type"] == "PACKAGE":
@@ -291,6 +291,92 @@ def get_route(request) -> JsonResponse:
         return JsonResponse(
             data={"route": route},
             status=status.HTTP_200_OK
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsBison])
+def get_service_active(request) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        queryset = Service.objects.filter(user_bison=request.user.id, arrived__isnull=True).first()
+
+        if not queryset:
+            raise Http404("There is no active service")
+
+        serializer = ServiceSerializer(queryset)
+
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    except Http404 as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
+def track_service(request, guide: int) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        queryset = Guide.objects.filter(guide_number=guide).first()
+
+        if not queryset:
+            raise Http404("Guide doesn't exist")
+
+        serializer = GuideSerializer(queryset)
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
+        )
+    except Http404 as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_404_NOT_FOUND
         )
 
     except KeyError:
