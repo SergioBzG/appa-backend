@@ -3,13 +3,18 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+
 from authentication.permissions.is_token_valid import IsTokenValid
 from authentication.permissions.role_permissions import IsCitizen, IsBison
 
 from ..helpers.get_service_price import get_carriage_price, get_package_price
 from ..helpers.get_route import get_optimal_route
+from ..helpers.assign_order import search_for_bison, search_for_order
 from ..helpers.checkpoints import Checkpoint
+
+from appa_admin.models import User
 from ..models import Service, Guide
+
 from ..serializers.carriage_serializer import CarriageSerializer
 from ..serializers.package_serializer import PackageSerializer
 from ..serializers.service_serializer import ServiceSerializer
@@ -37,6 +42,12 @@ def create_carriage(request) -> JsonResponse:
 
         if service_serializer.is_valid():
             service = service_serializer.save()
+            # Search for an available bison to assign to the service
+            bison: User | None = search_for_bison(service)
+            if bison:
+                service.user_bison = bison
+                service.save(update_fields=["user_bison"])
+
             Guide.objects.create(
                 service=service,
                 current_nation=service.origin_nation,
@@ -99,6 +110,12 @@ def create_package(request) -> JsonResponse:
 
         if service_serializer.is_valid():
             service = service_serializer.save()
+            # Search for an available bison to assign to the service
+            bison: User | None = search_for_bison(service)
+            if bison:
+                service.user_bison = bison
+                service.save(update_fields=["user_bison"])
+
             Guide.objects.create(
                 service=service,
                 current_nation=service.origin_nation,
@@ -166,6 +183,19 @@ def update_get_service(request, service_id: int) -> JsonResponse:
 
             if guide.current_checkpoint == service.destiny_checkpoint:
                 service.arrived = timezone.now()
+                service.save(update_fields=["arrived"])
+                # Now the bison is available again
+                bison: User = request.user
+                bison.available = True
+                bison.save(update_fields=["available"])
+
+                # Search for an order to assign to the bison
+                order: Service | None = search_for_order(bison)
+
+                if order:
+                    bison.bison_orders.add(order)
+                    bison.available = False
+                    bison.save(update_fields=["available"])
 
             if service.type == "CARRIAGE" and "price" in request.data:
                 service.price = request.data["price"]
