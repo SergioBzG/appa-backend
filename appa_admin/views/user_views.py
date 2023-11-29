@@ -1,4 +1,5 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from authentication.models import Role
 from authentication.permissions.role_permissions import IsCitizen
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -13,14 +14,13 @@ from ..serializers.user_serializer import UserSerializer
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
-def get_user_services(request, user_id: int) -> JsonResponse:
-    """_summary_
+def get_user_services(request, user_id: int, type: str = "") -> JsonResponse:
+    """
 
-        Args:
-            request (_type_): _description_
-            user_id (_int_): _description_
-        Returns:
-            JsonResponse: _description_
+    :param request:
+    :param user_id:
+    :param type:
+    :return:
     """
     try:
         user: User = User.objects.get(pk=user_id)
@@ -32,24 +32,51 @@ def get_user_services(request, user_id: int) -> JsonResponse:
 
         if user.role.name == "CITIZEN":
             user_services: list[Service] = user.citizen_orders.all().order_by("created")
-            services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
-            return JsonResponse(
-                data=services_serializer.data,
-                safe=False,
-                status=status.HTTP_200_OK
-            )
         elif user.role.name == "BISON":
             user_services: list[Service] = user.bison_orders.all().order_by("created")
-            services_serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
-            return JsonResponse(
-                data=services_serializer.data,
-                safe=False,
-                status=status.HTTP_200_OK
-            )
+
+        if type:
+            user_services = user_services.filter(type=type.upper())
+
+        serializer: ServiceSerializer = ServiceSerializer(user_services, many=True)
 
         return JsonResponse(
-            data={"message": "This user can not have services"},
-            status=status.HTTP_400_BAD_REQUEST
+            data=serializer.data,
+            safe=False,
+            status=status.HTTP_200_OK
+        )
+
+    except User.DoesNotExist:
+        return JsonResponse(
+            data={"message": "User does not exist"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
+def get_user_last_service(request, user_id: int) -> JsonResponse:
+    """
+
+    :param request:
+    :param user_id:
+    :return:
+    """
+    try:
+        user: User = User.objects.get(pk=user_id)
+        if user != request.user:
+            return JsonResponse(
+                data={"message": "Incorrect user id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        user_last_service: Service = user.citizen_orders.all().order_by("-created").first()
+
+        serializer: ServiceSerializer = ServiceSerializer(user_last_service)
+
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
         )
 
     except User.DoesNotExist:
@@ -118,6 +145,50 @@ def delete_user_profile(request, user_id: int) -> JsonResponse:
     except User.DoesNotExist:
         return JsonResponse(
             data={"message": "User does not exist"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsTokenValid])
+def get_users(request):
+    try:
+        role = request.query_params.get('role')
+        user_id = request.query_params.get('id')
+
+        queryset = User.objects.all()
+
+        if role:
+            role: int = Role.objects.get(name=role)
+            queryset = queryset.filter(role_id=role)
+
+        if user_id:
+            queryset = queryset.filter(id=user_id).first()
+            serializer = UserSerializer(queryset)
+            return JsonResponse(
+                data=serializer.data,
+                status=status.HTTP_200_OK
+            )
+
+        if not queryset:
+            raise Http404("No users found")
+
+        serializer = UserSerializer(queryset, many=True)
+
+        return JsonResponse(
+            data=serializer.data,
+            safe=False,
+            status=status.HTTP_200_OK
+        )
+
+    except Http404 as e:
+        return JsonResponse(
+            data={"message": str(e)},
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:

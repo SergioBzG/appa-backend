@@ -1,15 +1,24 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+
 from authentication.permissions.is_token_valid import IsTokenValid
 from authentication.permissions.role_permissions import IsCitizen, IsBison
 
-from services.models import Service, Guide
-from services.serializers.carriage_serializer import CarriageSerializer
-from services.serializers.package_serializer import PackageSerializer
-from services.serializers.service_serializer import ServiceSerializer
+from ..helpers.get_service_price import get_carriage_price, get_package_price
+from ..helpers.get_route import get_optimal_route
+from ..helpers.assign_order import search_for_bison, search_for_order
+from ..helpers.checkpoints import Checkpoint
+
+from appa_admin.models import User
+from ..models import Service, Guide
+
+from ..serializers.carriage_serializer import CarriageSerializer
+from ..serializers.guide_serializer import GuideSerializer
+from ..serializers.package_serializer import PackageSerializer
+from ..serializers.service_serializer import ServiceSerializer
 
 
 @api_view(["POST"])
@@ -30,11 +39,16 @@ def create_carriage(request) -> JsonResponse:
                 status=status.HTTP_403_FORBIDDEN
             )
         service: Service = None
-        request.data["price"] = 0
         service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
 
         if service_serializer.is_valid():
             service = service_serializer.save()
+            # Search for an available bison to assign to the service
+            bison: User | None = search_for_bison(service)
+            if bison:
+                service.user_bison = bison
+                service.save(update_fields=["user_bison"])
+
             Guide.objects.create(
                 service=service,
                 current_nation=service.origin_nation,
@@ -93,11 +107,16 @@ def create_package(request) -> JsonResponse:
                 status=status.HTTP_403_FORBIDDEN
             )
         service: Service = None
-        request.data["price"] = 0
         service_serializer: ServiceSerializer = ServiceSerializer(data=request.data)
 
         if service_serializer.is_valid():
             service = service_serializer.save()
+            # Search for an available bison to assign to the service
+            bison: User | None = search_for_bison(service)
+            if bison:
+                service.user_bison = bison
+                service.save(update_fields=["user_bison"])
+
             Guide.objects.create(
                 service=service,
                 current_nation=service.origin_nation,
@@ -165,6 +184,19 @@ def update_get_service(request, service_id: int) -> JsonResponse:
 
             if guide.current_checkpoint == service.destiny_checkpoint:
                 service.arrived = timezone.now()
+                service.save(update_fields=["arrived"])
+                # Now the bison is available again
+                bison: User = request.user
+                bison.available = True
+                bison.save(update_fields=["available"])
+
+                # Search for an order to assign to the bison
+                order: Service | None = search_for_order(bison)
+
+                if order:
+                    bison.bison_orders.add(order)
+                    bison.available = False
+                    bison.save(update_fields=["available"])
 
             if service.type == "CARRIAGE" and "price" in request.data:
                 service.price = request.data["price"]
@@ -188,7 +220,173 @@ def update_get_service(request, service_id: int) -> JsonResponse:
         )
     except KeyError:
         return JsonResponse(
-            data={"message": f"Missing required fields"},
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
+def get_service_price(request) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        start_checkpoint: Checkpoint = Checkpoint(request.data["origin_checkpoint"])
+        end_checkpoint: Checkpoint = Checkpoint(request.data["destiny_checkpoint"])
+        if request.data["type"] == "CARRIAGE":
+            price: int = get_carriage_price(start_checkpoint, end_checkpoint)
+        elif request.data["type"] == "PACKAGE":
+            price: int = get_package_price(start_checkpoint, end_checkpoint, request.data["package"])
+        else:
+            raise TypeError("Invalid service type")
+
+        return JsonResponse(
+            data={"price": price},
+            status=status.HTTP_200_OK
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except TypeError as msg:
+        return JsonResponse(
+            data={"message": f"{msg}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
+def get_route(request) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        start_checkpoint: Checkpoint = Checkpoint(request.data["origin_checkpoint"])
+        end_checkpoint: Checkpoint = Checkpoint(request.data["destiny_checkpoint"])
+        route: list[str] = get_optimal_route(start_checkpoint, end_checkpoint)
+
+        return JsonResponse(
+            data={"route": route},
+            status=status.HTTP_200_OK
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsBison])
+def get_service_active(request) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        queryset = Service.objects.filter(user_bison=request.user.id, arrived__isnull=True).first()
+
+        if not queryset:
+            raise Http404("There is no active service")
+
+        serializer = ServiceSerializer(queryset)
+
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    except Http404 as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
+def track_service(request, guide: int) -> JsonResponse:
+    """
+
+    :param request:
+    :return:
+    """
+    try:
+        queryset = Guide.objects.filter(guide_number=guide).first()
+
+        if not queryset:
+            raise Http404("Guide doesn't exist")
+
+        serializer = GuideSerializer(queryset)
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
+        )
+    except Http404 as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    except KeyError:
+        return JsonResponse(
+            data={"message": "Missing required fields"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as value:
+        return JsonResponse(
+            data={"message": f"{value} is not a valid Checkpoint"},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:

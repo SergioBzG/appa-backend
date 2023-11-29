@@ -5,14 +5,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from ..permissions.is_token_valid import IsTokenValid
 
-from ..models import BlackListedToken
-from appa_admin.models import User
-from authentication.models.role import Role
-
+from ..models import BlackListedToken, Role
 from appa_admin.serializers.user_serializer import UserSerializer
-from authentication.serializers.user_login_serializer import UserLoginSerializer
-
-from ..helpers.create_token import get_tokens_for_user
 
 
 @api_view(["POST"])
@@ -41,35 +35,6 @@ def register_user(request) -> JsonResponse:
             data={"message": f"{request.data['role']} role does not exist."},
             status=status.HTTP_400_BAD_REQUEST
         )
-
-
-@api_view(["POST"])
-def login(request) -> JsonResponse:
-    """_summary_
-
-    Args:
-        request (_type_): _description_
-
-    Returns:
-        JsonResponse: _description_
-    """
-    login_serializer: UserLoginSerializer = UserLoginSerializer(data=request.data)
-
-    if login_serializer.is_valid(raise_exception=True):
-        user: User = login_serializer.validated_data
-        user_serializer: UserSerializer = UserSerializer(user)
-        data: dict = user_serializer.data
-        data["tokens"]: dict = get_tokens_for_user(user)
-
-        return JsonResponse(
-            data=data,
-            status=status.HTTP_200_OK
-        )
-
-    return JsonResponse(
-        data=login_serializer.errors,
-        status=status.HTTP_401_UNAUTHORIZED
-    )
 
 
 @api_view(["POST"])
