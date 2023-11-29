@@ -200,7 +200,7 @@ def update_get_service(request, service_id: int) -> JsonResponse:
         )
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated, IsTokenValid, IsCitizen])
 def get_service_price(request) -> JsonResponse:
     """
@@ -211,7 +211,6 @@ def get_service_price(request) -> JsonResponse:
     try:
         start_checkpoint: Checkpoint = Checkpoint(request.data["origin_checkpoint"])
         end_checkpoint: Checkpoint = Checkpoint(request.data["destiny_checkpoint"])
-
         if request.data["type"] == "CARRIAGE":
             price: int = get_carriage_price(start_checkpoint, end_checkpoint)
         elif request.data["type"] == "PACKAGE":
