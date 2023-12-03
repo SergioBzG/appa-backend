@@ -16,8 +16,13 @@ services_urls = [
     ),
     path(
         "services/<int:service_id>/",
-        service_views.update_get_service,
-        name="create_get_service"
+        service_views.update_service,
+        name="update_service"
+    ),
+    path(
+        "services/get/<int:service_id>/",
+        service_views.get_service,
+        name="get_service"
     ),
     path(
         "services/price/",

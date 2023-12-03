@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
+from authentication.models import Role
 from authentication.permissions.is_token_valid import IsTokenValid
 from authentication.permissions.role_permissions import IsCitizen, IsBison
 
@@ -157,9 +158,9 @@ def create_package(request) -> JsonResponse:
         )
 
 
-@api_view(["PATCH", "GET"])
+@api_view(["PATCH"])
 @permission_classes([IsAuthenticated, IsTokenValid, IsBison])
-def update_get_service(request, service_id: int) -> JsonResponse:
+def update_service(request, service_id: int) -> JsonResponse:
     """_summary_
 
         Args:
@@ -176,42 +177,29 @@ def update_get_service(request, service_id: int) -> JsonResponse:
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if request.method == "PATCH":
-            guide: Guide = service.guide
-            guide.current_nation = request.data["current_nation"]
-            guide.current_checkpoint = request.data["current_checkpoint"]
-            guide.save(update_fields=["current_nation", "current_checkpoint"])
-
-            if guide.current_checkpoint == service.destiny_checkpoint:
-                service.arrived = timezone.now()
-                service.save(update_fields=["arrived"])
-                # Now the bison is available again
-                bison: User = request.user
-                bison.available = True
+        guide: Guide = service.guide
+        guide.current_nation = request.data["current_nation"]
+        guide.current_checkpoint = request.data["current_checkpoint"]
+        guide.save(update_fields=["current_nation", "current_checkpoint"])
+        if guide.current_checkpoint == service.destiny_checkpoint:
+            service.arrived = timezone.now()
+            service.save(update_fields=["arrived"])
+            # Now the bison is available again
+            bison: User = request.user
+            bison.available = True
+            bison.save(update_fields=["available"])
+            # Search for an order to assign to the bison
+            order: Service | None = search_for_order(bison)
+            if order:
+                bison.bison_orders.add(order)
+                bison.available = False
                 bison.save(update_fields=["available"])
-
-                # Search for an order to assign to the bison
-                order: Service | None = search_for_order(bison)
-
-                if order:
-                    bison.bison_orders.add(order)
-                    bison.available = False
-                    bison.save(update_fields=["available"])
-
-            if service.type == "CARRIAGE" and "price" in request.data:
-                service.price = request.data["price"]
-                service.save(update_fields=["price"])
-
-            serializer: ServiceSerializer = ServiceSerializer(service)
-            data: dict = {"message": "Service updated successfully", "service": serializer.data}
-            return JsonResponse(data=data, status=status.HTTP_200_OK)
-
-        elif request.method == "GET":
-            serializer: ServiceSerializer = ServiceSerializer(service)
-            return JsonResponse(
-                data=serializer.data,
-                status=status.HTTP_200_OK
-            )
+        if service.type == "CARRIAGE" and "price" in request.data:
+            service.price = request.data["price"]
+            service.save(update_fields=["price"])
+        serializer: ServiceSerializer = ServiceSerializer(service)
+        data: dict = {"message": "Service updated successfully", "service": serializer.data}
+        return JsonResponse(data=data, status=status.HTTP_200_OK)
 
     except Service.DoesNotExist:
         return JsonResponse(
@@ -228,6 +216,52 @@ def update_get_service(request, service_id: int) -> JsonResponse:
             data={"error message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
+def get_service(request, service_id: int) -> JsonResponse:
+    """_summary_
+
+    Args:
+        request (_type_): _description_
+        service_id (_type_): _description_
+
+    Returns:
+        JsonResponse: _description_
+    """
+    try:
+        service: Service = Service.objects.get(id=service_id)
+        role: Role = request.user.role
+
+        if role.name == "BISON" and service.user_bison.id != request.user.id:
+            return JsonResponse(
+                data={"message": "You do not have a service assigned with this id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        elif role.name == "CITIZEN" and service.user_citizen.id != request.user.id:
+            return JsonResponse(
+                data={"message": "You do not have a service assigned with this id"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer: ServiceSerializer = ServiceSerializer(service)
+        return JsonResponse(
+            data=serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    except Service.DoesNotExist:
+        return JsonResponse(
+            data={"message": "Service does not exist"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return JsonResponse(
+            data={"error message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 
 
 @api_view(["POST"])
