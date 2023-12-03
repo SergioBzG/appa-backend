@@ -275,7 +275,7 @@ def get_service_price(request) -> JsonResponse:
         )
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
 def get_route(request) -> JsonResponse:
     """
