@@ -32,6 +32,9 @@ def get_package_price(origin_checkpoint: Checkpoint, destiny_checkpoint: Checkpo
 
     shortest_path, total_distance = find_shortest_path(graph, origin_checkpoint, destiny_checkpoint)
 
+    if total_distance == 0:
+        return 0
+
     base_price_short_distance: int = 20000
     base_price_long_distance: int = 50000
     base_price_small_volume: int = 7000

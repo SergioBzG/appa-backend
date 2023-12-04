@@ -41,7 +41,7 @@ def search_for_order(bison: User) -> Service | None:
     :param bison: User with BISON role to assign a service to
     :return: Service selected to be delivered by the bison
     """
-    order: Service | None = Service.objects.filter(user_bison=None).order_by("created").first()
+    order: Service | None = Service.objects.filter(user_bison=None, arrived__isnull=True).order_by("created").first()
 
     if order:
         order.user_bison = bison

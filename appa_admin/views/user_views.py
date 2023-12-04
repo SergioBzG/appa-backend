@@ -1,13 +1,15 @@
 from django.http import JsonResponse, Http404
-from authentication.models import Role
+from authentication.models import Role, BlackListedToken
 from authentication.permissions.role_permissions import IsCitizen
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from authentication.permissions.is_token_valid import IsTokenValid
+from services.helpers.assign_order import search_for_bison
 from services.models import Service
 from services.serializers.service_serializer import ServiceSerializer
+from ..helpers.delete_user import release_bison
 from ..models.user import User
 from ..serializers.user_serializer import UserSerializer
 
@@ -71,7 +73,8 @@ def get_user_last_service(request, user_id: int) -> JsonResponse:
             )
 
         user_last_service: Service = user.citizen_orders.all().order_by("-created").first()
-
+        if not user_last_service:
+            raise Http404("User has no services")
         serializer: ServiceSerializer = ServiceSerializer(user_last_service)
 
         return JsonResponse(
@@ -84,10 +87,15 @@ def get_user_last_service(request, user_id: int) -> JsonResponse:
             data={"message": "User does not exist"},
             status=status.HTTP_404_NOT_FOUND
         )
+    except Http404 as e:
+        return JsonResponse(
+            data={"message": str(e)},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 @api_view(["PATCH"])
-@permission_classes([IsAuthenticated, IsTokenValid, ~IsAdminUser])
+@permission_classes([IsAuthenticated, IsTokenValid])
 def update_user_profile(request, user_id: int) -> JsonResponse:
     try:
         user: User = User.objects.get(pk=user_id)
@@ -97,7 +105,6 @@ def update_user_profile(request, user_id: int) -> JsonResponse:
                 data={"message": "Incorrect user id"},
                 status=status.HTTP_403_FORBIDDEN
             )
-
         user_serializer: UserSerializer = UserSerializer(user, data=request.data, partial=True)
 
         if user_serializer.is_valid():
@@ -129,13 +136,19 @@ def delete_user_profile(request, user_id: int) -> JsonResponse:
         user: User = User.objects.get(pk=user_id)
         if user != request.user:
             if request.user.is_staff:
-                pass
+                service: Service = user.bison_orders.filter(arrived__isnull=True).first()
+                if service:
+                    bison: User | None = search_for_bison(service)
+                    service.user_bison = bison
+                    service.save(update_fields=["user_bison"])
             else:
                 return JsonResponse(
                     data={"message": "Incorrect user id"},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
+        if user.role.name == "CITIZEN":
+            release_bison(user)
+            BlackListedToken.objects.create(token=request.auth, user=user)
         user.delete()
         return JsonResponse(
             data={"message": "User deleted"},
