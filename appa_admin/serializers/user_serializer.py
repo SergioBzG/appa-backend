@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get("name", instance.name)
         instance.email = validated_data.get("email", instance.email)
         instance.phone = validated_data.get("phone", instance.phone)
-        instance.password = validated_data.get("password", instance.password)
+        instance.set_password(validated_data.get("password", instance.password))
         instance.save()
         return instance
 
