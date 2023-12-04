@@ -2,39 +2,41 @@ from ..helpers.checkpoints import Checkpoint
 from ..helpers.graph import graph
 
 
-def find_shortest_path(graph: dict[Checkpoint, dict[Checkpoint, float]], start: Checkpoint, end: Checkpoint) -> tuple[list[Checkpoint], float] | None:
-    """
-    Find the shortest path between two checkpoints and the total distance
+import heapq
 
-    :param graph: graph with checkpoints as nodes and distances as edges
-    :param start: start checkpoint of the path
-    :param end: end checkpoint of the path
-    :return: tuple with the shortest path and the total distance
-    """
+def find_shortest_path(graph, start, end):
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+    previous_nodes = {node: None for node in graph}
+    priority_queue = [(0, start)]  # Usamos una cola de prioridad (heap)
 
-    distances: dict = {node: 0 if node == start else float('inf') for node in graph}
-    previous_nodes: dict = {node: None for node in graph}
-    nodes: list[Checkpoint] = list(graph.keys())
+    while priority_queue:
+        current_distance, current_node = heapq.heappop(priority_queue)
 
-    while nodes:
-        closest_node = min(nodes, key=lambda node: distances[node])
-        if closest_node == end:
-            path = []
-            current_node = end
-            total_distance = 0
-            while current_node != start:
-                path.insert(0, current_node)
-                total_distance += graph[current_node][previous_nodes[current_node]]
-                current_node = previous_nodes[current_node]
-            path.insert(0, start)
-            return path, total_distance
+        if current_node == end:
+            break
 
-        nodes.remove(closest_node)
+        if current_distance > distances[current_node]:
+            continue
 
-        for neighbor, distance in graph[closest_node].items():
-            total_distance = distances[closest_node] + distance
-            if total_distance < distances[neighbor]:
-                distances[neighbor] = total_distance
-                previous_nodes[neighbor] = closest_node
+        for neighbor, weight in graph[current_node].items():
+            distance_to_neighbor = current_distance + weight
 
-    return None
+            if distance_to_neighbor < distances[neighbor]:
+                distances[neighbor] = distance_to_neighbor
+                previous_nodes[neighbor] = current_node
+                heapq.heappush(priority_queue, (distance_to_neighbor, neighbor))
+
+    # Reconstruir el camino y calcular la distancia total
+    path = []
+    total_distance = distances[end]
+    current_node = end
+
+    while previous_nodes[current_node] is not None:
+        path.insert(0, current_node)
+        current_node = previous_nodes[current_node]
+
+    path.insert(0, start)
+    return path, total_distance
+
+
