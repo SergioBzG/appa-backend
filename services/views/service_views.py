@@ -190,8 +190,6 @@ def update_service(request, service_id: int) -> JsonResponse:
             bison.save(update_fields=["available"])
             # Search for an order to assign to the bison
             order: Service | None = search_for_order(bison)
-            print(f"Bison: {bison.available}")
-            print(f"Order: {order}")
             if order:
                 bison.bison_orders.add(order)
                 bison.available = False
